@@ -1,0 +1,186 @@
+#include <iostream>
+#include <vector>
+#include <string>
+
+using namespace std;
+
+// Base class for different types of rooms
+class Room {
+protected:
+    int roomNumber;
+    double pricePerNight;
+    bool isBooked;
+
+public:
+    Room(int roomNumber, double pricePerNight)
+        : roomNumber(roomNumber), pricePerNight(pricePerNight), isBooked(false) {}
+
+    virtual ~Room() {}
+
+    int getRoomNumber() const { return roomNumber; }
+    bool getIsBooked() const { return isBooked; }
+    void bookRoom() { isBooked = true; }
+    void cancelBooking() { isBooked = false; }
+
+    virtual void displayInfo() const = 0; // Pure virtual function
+};
+
+class SingleRoom : public Room {
+public:
+    SingleRoom(int roomNumber, double pricePerNight)
+        : Room(roomNumber, pricePerNight) {}
+
+    void displayInfo() const override {
+        cout << "Single Room - Room Number: " << roomNumber << ", Price per Night: Rs" << pricePerNight << endl;
+    }
+};
+
+class DoubleRoom : public Room {
+public:
+    DoubleRoom(int roomNumber, double pricePerNight)
+        : Room(roomNumber, pricePerNight) {}
+
+    void displayInfo() const override {
+        cout << "Double Room - Room Number: " << roomNumber << ", Price per Night: Rs" << pricePerNight << endl;
+    }
+};
+
+class Suite : public Room {
+public:
+    Suite(int roomNumber, double pricePerNight)
+        : Room(roomNumber, pricePerNight) {}
+
+    void displayInfo() const override {
+        cout << "Suite - Room Number: " << roomNumber << ", Price per Night: Rs" << pricePerNight << endl;
+    }
+};
+
+class Customer {
+private:
+    string name;
+    int customerId;
+
+public:
+    Customer(string name, int customerId) : name(name), customerId(customerId) {}
+
+    int getCustomerId() const { return customerId; }
+    string getName() const { return name; }
+
+    void displayInfo() const {
+        cout << "Customer ID: " << customerId << ", Name: " << name << endl;
+    }
+};
+
+class Booking {
+private:
+    int bookingId;
+    Customer customer;
+    Room* room;
+    int numberOfNights;
+
+public:
+    Booking(int bookingId, Customer customer, Room* room, int numberOfNights)
+        : bookingId(bookingId), customer(customer), room(room), numberOfNights(numberOfNights) {
+        room->bookRoom();
+    }
+
+    int getBookingId() const { return bookingId; }
+
+    void displayInfo() const {
+        cout << "Booking ID: " << bookingId << endl;
+        customer.displayInfo();
+        room->displayInfo();
+        cout << "Number of Nights: " << numberOfNights << endl;
+    }
+
+    void cancel() {
+        room->cancelBooking();
+        cout << "Booking ID " << bookingId << " has been canceled." << endl;
+    }
+};
+
+class Hotel {
+private:
+    vector<Room*> rooms;
+    vector<Booking> bookings;
+    int nextBookingId = 1;
+
+public:
+    ~Hotel() {
+        for (Room* room : rooms) {
+            delete room;
+        }
+    }
+
+    void addRoom(Room* room) {
+        rooms.push_back(room);
+    }
+
+    void displayAvailableRooms() const {
+        cout << "Available Rooms:" << endl;
+        for (Room* room : rooms) {
+            if (!room->getIsBooked()) {
+                room->displayInfo();
+            }
+        }
+    }
+
+    void bookRoom(int roomNumber, Customer customer, int numberOfNights) {
+        for (Room* room : rooms) {
+            if (room->getRoomNumber() == roomNumber && !room->getIsBooked()) {
+                Booking booking(nextBookingId++, customer, room, numberOfNights);
+                bookings.push_back(booking);
+                cout << "Booking successful!" << endl;
+                booking.displayInfo();
+                return;
+            }
+        }
+        cout << "Room is either not available or already booked." << endl;
+    }
+
+    void cancelBooking(int bookingId) {
+        for (auto it = bookings.begin(); it != bookings.end(); ++it) {
+            if (it->getBookingId() == bookingId) {
+                it->cancel();
+                bookings.erase(it);
+                return;
+            }
+        }
+        cout << "Booking ID not found." << endl;
+    }
+};
+
+// Simple user interface for interacting with the system
+int main() {
+    Hotel hotel;
+
+    // Add rooms to the hotel
+    hotel.addRoom(new SingleRoom(101, 100.0));
+    hotel.addRoom(new DoubleRoom(102, 150.0));
+    hotel.addRoom(new Suite(201, 300.0));
+
+    // Create some customers
+    Customer customer1("John Doe", 1);
+    Customer customer2("Jane Smith", 2);
+
+    // Display available rooms
+    hotel.displayAvailableRooms();
+
+    // Book rooms
+    hotel.bookRoom(101, customer1, 3);
+    hotel.bookRoom(201, customer2, 2);
+
+    // Attempt to book an already booked room
+    hotel.bookRoom(101, customer2, 1);
+
+    // Display available rooms after booking
+    hotel.displayAvailableRooms();
+
+    // Cancel a booking
+    hotel.cancelBooking(1);
+
+    // Display available rooms after cancellation
+    hotel.displayAvailableRooms();
+
+    return 0;
+}
