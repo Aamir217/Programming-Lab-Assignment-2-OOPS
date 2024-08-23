@@ -1,0 +1,261 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <stdexcept>
+#include <fstream>
+
+using namespace std;
+
+class Book {
+private:
+    string title;
+    string author;
+    string ISBN;
+    bool isIssued;
+
+public:
+    Book(string t, string a, string isbn)
+        : title(t), author(a), ISBN(isbn), isIssued(false) {}
+
+    string getTitle() const { return title; }
+    string getAuthor() const { return author; }
+    string getISBN() const { return ISBN; }
+    bool getIssuedStatus() const { return isIssued; }
+
+    void issueBook() {
+        if (isIssued) {
+            throw runtime_error("Book already issued.");
+        }
+        isIssued = true;
+    }
+
+    void returnBook() {
+        if (!isIssued) {
+            throw runtime_error("Book is not issued.");
+        }
+        isIssued = false;
+    }
+
+    void display() const {
+        cout << "Title: " << title << "\nAuthor: " << author
+             << "\nISBN: " << ISBN << "\nStatus: "
+             << (isIssued ? "Issued" : "Available") << endl;
+    }
+};
+
+class Member {
+private:
+    string name;
+    int memberId;
+    vector<string> borrowedBooks;
+
+public:
+    Member(string n, int id) : name(n), memberId(id) {}
+
+    string getName() const { return name; }
+    int getMemberId() const { return memberId; }
+
+    void borrowBook(const string& isbn) {
+        borrowedBooks.push_back(isbn);
+    }
+
+    void returnBook(const string& isbn) {
+        auto it = find(borrowedBooks.begin(), borrowedBooks.end(), isbn);
+        if (it != borrowedBooks.end()) {
+            borrowedBooks.erase(it);
+        } else {
+            throw runtime_error("Book not borrowed by this member.");
+        }
+    }
+
+    void display() const {
+        cout << "Member Name: " << name << "\nMember ID: " << memberId << "\nBorrowed Books: ";
+        for (const auto& isbn : borrowedBooks) {
+            cout << isbn << " ";
+        }
+        cout << endl;
+    }
+};
+
+class Librarian {
+private:
+    string name;
+    int librarianId;
+
+public:
+    Librarian(string n, int id) : name(n), librarianId(id) {}
+
+    string getName() const { return name; }
+    int getLibrarianId() const { return librarianId; }
+
+    void display() const {
+        cout << "Librarian Name: " << name << "\nLibrarian ID: " << librarianId << endl;
+    }
+};
+
+class Loan {
+private:
+    string bookISBN;
+    int memberId;
+    int loanId;
+
+public:
+    Loan(string isbn, int mId, int lId) : bookISBN(isbn), memberId(mId), loanId(lId) {}
+
+    string getBookISBN() const { return bookISBN; }
+    int getMemberId() const { return memberId; }
+    int getLoanId() const { return loanId; }
+
+    void display() const {
+        cout << "Loan ID: " << loanId << "\nBook ISBN: " << bookISBN
+             << "\nMember ID: " << memberId << endl;
+    }
+};
+
+class Library {
+private:
+    vector<Book> books;
+    vector<Member> members;
+    vector<Loan> loans;
+    vector<Librarian> librarians;
+
+    void saveToFile() {
+        ofstream outFile("library_data.txt");
+        // Implement serialization logic for books, members, and loans
+        outFile.close();
+    }
+
+    void loadFromFile() {
+        ifstream inFile("library_data.txt");
+        // Implement deserialization logic for books, members, and loans
+        inFile.close();
+    }
+
+public:
+    Library() {
+        loadFromFile();
+    }
+
+    ~Library() {
+        saveToFile();
+    }
+
+    void addBook(const Book& book) {
+        books.push_back(book);
+    }
+
+    void removeBook(const string& isbn) {
+        auto it = remove_if(books.begin(), books.end(), [&](const Book& b) { return b.getISBN() == isbn; });
+        if (it != books.end()) {
+            books.erase(it);
+        } else {
+            throw runtime_error("Book not found.");
+        }
+    }
+
+    void addMember(const Member& member) {
+        members.push_back(member);
+    }
+
+    void removeMember(int memberId) {
+        auto it = remove_if(members.begin(), members.end(), [&](const Member& m) { return m.getMemberId() == memberId; });
+        if (it != members.end()) {
+            members.erase(it);
+        } else {
+            throw runtime_error("Member not found.");
+        }
+    }
+
+    void issueBook(const string& isbn, int memberId) {
+        auto bookIt = find_if(books.begin(), books.end(), [&](const Book& b) { return b.getISBN() == isbn; });
+        if (bookIt == books.end()) {
+            throw runtime_error("Book not found.");
+        }
+
+        auto memberIt = find_if(members.begin(), members.end(), [&](const Member& m) { return m.getMemberId() == memberId; });
+        if (memberIt == members.end()) {
+            throw runtime_error("Member not found.");
+        }
+
+        if (bookIt->getIssuedStatus()) {
+            throw runtime_error("Book is already issued.");
+        }
+
+        bookIt->issueBook();
+        memberIt->borrowBook(isbn);
+        loans.push_back(Loan(isbn, memberId, loans.size() + 1));
+    }
+
+    void returnBook(const string& isbn, int memberId) {
+        auto bookIt = find_if(books.begin(), books.end(), [&](const Book& b) { return b.getISBN() == isbn; });
+        if (bookIt == books.end()) {
+            throw runtime_error("Book not found.");
+        }
+
+        auto memberIt = find_if(members.begin(), members.end(), [&](const Member& m) { return m.getMemberId() == memberId; });
+        if (memberIt == members.end()) {
+            throw runtime_error("Member not found.");
+        }
+
+        if (!bookIt->getIssuedStatus()) {
+            throw runtime_error("Book is not issued.");
+        }
+
+        bookIt->returnBook();
+        memberIt->returnBook(isbn);
+
+        auto loanIt = remove_if(loans.begin(), loans.end(), [&](const Loan& l) { return l.getBookISBN() == isbn && l.getMemberId() == memberId; });
+        if (loanIt != loans.end()) {
+            loans.erase(loanIt);
+        }
+    }
+
+    void displayBooks() const {
+        for (const auto& book : books) {
+            book.display();
+            cout << endl;
+        }
+    }
+
+    void displayMembers() const {
+        for (const auto& member : members) {
+            member.display();
+            cout << endl;
+        }
+    }
+
+    void displayLoans() const {
+        for (const auto& loan : loans) {
+            loan.display();
+            cout << endl;
+        }
+    }
+};
+
+int main() {
+    Library library;
+
+    try {
+        library.addBook(Book("The Great Gatsby", "F. Scott Fitzgerald", "123456789"));
+        library.addBook(Book("To Kill a Mockingbird", "Harper Lee", "987654321"));
+
+        library.addMember(Member("Alice", 1));
+        library.addMember(Member("Bob", 2));
+
+        library.issueBook("123456789", 1);
+
+        library.displayBooks();
+        library.displayMembers();
+        library.displayLoans();
+
+        library.returnBook("123456789", 1);
+
+        library.displayBooks();
+        library.displayLoans();
+    } catch (const exception& ex) {
+        cerr << "Error: " << ex.what() << endl;
+    }
+
+    return 0;
+}
