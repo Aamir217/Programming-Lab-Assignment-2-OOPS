@@ -3,7 +3,6 @@
 #include <string>
 #include <algorithm>
 #include <stdexcept>
-#include <fstream>
 
 using namespace std;
 
@@ -120,27 +119,7 @@ private:
     vector<Loan> loans;
     vector<Librarian> librarians;
 
-    void saveToFile() {
-        ofstream outFile("library_data.txt");
-        // Implement serialization logic for books, members, and loans
-        outFile.close();
-    }
-
-    void loadFromFile() {
-        ifstream inFile("library_data.txt");
-        // Implement deserialization logic for books, members, and loans
-        inFile.close();
-    }
-
 public:
-    Library() {
-        loadFromFile();
-    }
-
-    ~Library() {
-        saveToFile();
-    }
-
     void addBook(const Book& book) {
         books.push_back(book);
     }
