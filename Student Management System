@@ -1,0 +1,142 @@
+#include <iostream>
+#include <unordered_map>
+#include <vector>
+#include <string>
+#include <stdexcept>
+
+using namespace std;
+
+class Course;
+
+class Student {
+private:
+    string student_id;
+    string name;
+    unordered_map<Course*, char> enrolled_courses;
+
+public:
+    Student(const string& id, const string& name) : student_id(id), name(name) {}
+
+    void enroll(Course* course);
+    void assignGrade(Course* course, char grade);
+    void viewTranscript() const;
+};
+
+class Course {
+protected:
+    string course_id;
+    string name;
+    int capacity;
+    int enrolled_count;
+    vector<Student*> enrolled_students;
+
+public:
+    Course(const string& id, const string& name, int capacity)
+        : course_id(id), name(name), capacity(capacity), enrolled_count(0) {}
+
+    virtual ~Course() {}
+
+    bool isFull() const { return enrolled_count >= capacity; }
+    void addStudent(Student* student);
+
+    friend class Student;
+};
+
+class Instructor {
+private:
+    string instructor_id;
+    string name;
+    vector<Course*> courses;
+
+public:
+    Instructor(const string& id, const string& name) : instructor_id(id), name(name) {}
+
+    void assignCourse(Course* course) {
+        courses.push_back(course);
+    }
+};
+
+class Grade {
+private:
+    Student* student;
+    Course* course;
+    char grade;
+
+public:
+    Grade(Student* s, Course* c, char g) : student(s), course(c), grade(g) {}
+};
+
+void Student::enroll(Course* course) {
+    if (course->isFull()) {
+        throw runtime_error("Course is full.");
+    }
+    if (enrolled_courses.find(course) != enrolled_courses.end()) {
+        throw runtime_error("Already enrolled in this course.");
+    }
+    course->addStudent(this);
+    enrolled_courses[course] = ' '; // No grade assigned yet
+}
+
+void Student::assignGrade(Course* course, char grade) {
+    if (enrolled_courses.find(course) == enrolled_courses.end()) {
+        throw runtime_error("Not enrolled in this course.");
+    }
+    enrolled_courses[course] = grade;
+}
+
+void Student::viewTranscript() const {
+    cout << "Transcript for " << name << ":\n";
+    for (const auto& entry : enrolled_courses) {
+        cout << "Course: " << entry.first->name << ", Grade: " << entry.second << '\n';
+    }
+}
+
+void Course::addStudent(Student* student) {
+    if (isFull()) {
+        throw runtime_error("Cannot enroll; course is full.");
+    }
+    enrolled_students.push_back(student);
+    enrolled_count++;
+}
+
+int main() {
+    try {
+        // Create courses
+        Course* c1 = new Course("CS101", "Introduction to Computer Science", 30);
+        Course* c2 = new Course("CS201", "Advanced Algorithms", 15);
+
+        // Create students
+        Student* s1 = new Student("001", "Alice");
+        Student* s2 = new Student("002", "Bob");
+
+        // Create instructor
+        Instructor* i1 = new Instructor("I001", "Dr. Smith");
+
+        // Assign courses to instructor
+        i1->assignCourse(c1);
+
+        // Enroll students
+        s1->enroll(c1);
+        s2->enroll(c2);
+
+        // Assign grades
+        s1->assignGrade(c1, 'A');
+        s2->assignGrade(c2, 'B');
+
+        // View transcripts
+        s1->viewTranscript();
+        s2->viewTranscript();
+
+        // Clean up
+        delete c1;
+        delete c2;
+        delete s1;
+        delete s2;
+        delete i1;
+
+    } catch (const exception& e) {
+        cerr << "Error: " << e.what() << '\n';
+    }
+
+    return 0;
+}
